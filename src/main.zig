@@ -11,6 +11,12 @@ pub fn main() !void {
     defer debug.disassembleChunk(&chunk, "test");
 
     try chunk.writeChunk(@intFromEnum(OpCode.RETURN));
+    var constant = try chunk.addConstant(3);
+    try chunk.writeChunk(@intFromEnum(OpCode.CONSTANT));
+    try chunk.writeChunk(constant);
+    constant = try chunk.addConstant(1.4);
+    try chunk.writeChunk(@intFromEnum(OpCode.CONSTANT));
+    try chunk.writeChunk(constant);
 }
 
 test "simple test" {

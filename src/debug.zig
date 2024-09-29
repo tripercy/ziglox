@@ -1,5 +1,6 @@
 const std = @import("std");
 const chunkLib = @import("chunk.zig");
+const valueLib = @import("value.zig");
 
 const Chunk = chunkLib.Chunk;
 const OpCode = chunkLib.OpCode;
@@ -15,7 +16,7 @@ pub fn disassembleChunk(chunk: *Chunk, chunkName: []const u8) void {
         if (disassembleInstruction(chunk, offset)) |actualOffset| {
             offset = actualOffset;
         } else |_| {
-            print("Failed to disassemble code {b:04} at offset {d}\n", .{ chunk.code.items[offset], offset });
+            print("Failed to disassemble code {b:0^4} at offset {d}\n", .{ chunk.code.items[offset], offset });
             return;
         }
     }
@@ -29,10 +30,24 @@ fn disassembleInstruction(chunk: *Chunk, offset: u32) !u32 {
         .RETURN => {
             return simpleInstruction("RETURN", offset);
         },
+        .CONSTANT => {
+            return constantInstruction("CONSTANT", chunk, offset);
+        },
     }
 }
 
-fn simpleInstruction(chunkName: []const u8, offset: u32) u32 {
-    print("{s}\n", .{chunkName});
+fn simpleInstruction(name: []const u8, offset: u32) u32 {
+    print("{s}\n", .{name});
     return offset + 1;
+}
+
+fn constantInstruction(name: []const u8, chunk: *Chunk, offset: u32) u32 {
+    const constIndex = chunk.code.items[offset + 1];
+    const constValue = chunk.constants.values.items[constIndex];
+
+    print("{s: <16}{d: <4}'", .{ name, constIndex });
+    valueLib.printValue(constValue);
+    print("'\n", .{});
+
+    return offset + 2;
 }
