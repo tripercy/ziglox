@@ -26,6 +26,12 @@ fn disassembleInstruction(chunk: *Chunk, offset: u32) !u32 {
     const code = chunk.code.items[offset];
     print("{b:0^4} ", .{code});
 
+    if (offset > 0 and chunk.lines.items[offset] == chunk.lines.items[offset - 1]) {
+        print("{c: >4} ", .{'|'});
+    } else {
+        print("{d: >4} ", .{chunk.lines.items[offset]});
+    }
+
     switch (try std.meta.intToEnum(OpCode, code)) {
         .RETURN => {
             return simpleInstruction("RETURN", offset);
