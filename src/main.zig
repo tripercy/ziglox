@@ -13,10 +13,8 @@ pub fn main() !void {
     try chunk.writeChunk(@intFromEnum(OpCode.RETURN), 123);
     const constant = try chunk.addConstant(3);
     try chunk.writeChunk(@intFromEnum(OpCode.CONSTANT), 125);
-    try chunk.writeChunk(constant, 125);
-    try chunk.writeChunk(@intFromEnum(OpCode.RETURN), 125);
-    try chunk.writeChunk(@intFromEnum(OpCode.RETURN), 127);
-    try chunk.writeChunk(@intFromEnum(OpCode.RETURN), 128);
+    try chunk.writeChunk(@intCast(constant), 125);
+    try chunk.writeConstant(69.42, 420);
 }
 
 test "simple test" {

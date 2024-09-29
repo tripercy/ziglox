@@ -4,6 +4,7 @@ const valueLib = @import("value.zig");
 pub const OpCode = enum(u8) {
     RETURN,
     CONSTANT,
+    CONSTANT_LONG,
 };
 
 pub const Chunk = struct {
@@ -41,6 +42,17 @@ pub const Chunk = struct {
         }
     }
 
+    pub fn writeConstant(this: *Chunk, value: valueLib.Value, line: u32) !void {
+        const constantIndex = try this.addConstant(value);
+
+        try this.writeChunk(@intFromEnum(OpCode.CONSTANT_LONG), line);
+
+        inline for (0..3) |i| {
+            const byte = constantIndex >> (2 - i) * 8;
+            try this.writeChunk(@intCast(byte), line);
+        }
+    }
+
     pub fn getLine(this: *Chunk, opIndex: u32) u32 {
         var i: u32 = 0;
         var indexPassed = this.lines.items[1];
@@ -52,7 +64,7 @@ pub const Chunk = struct {
         return this.lines.items[i];
     }
 
-    pub fn addConstant(this: *Chunk, value: valueLib.Value) !u8 {
+    pub fn addConstant(this: *Chunk, value: valueLib.Value) !u32 {
         try this.constants.writeValue(value);
         return @intCast(this.constants.values.items.len - 1);
     }

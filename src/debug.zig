@@ -40,6 +40,9 @@ fn disassembleInstruction(chunk: *Chunk, offset: u32) !u32 {
         .CONSTANT => {
             return constantInstruction("CONSTANT", chunk, offset);
         },
+        .CONSTANT_LONG => {
+            return constantLongInstruction("CONSTANT_LONG", chunk, offset);
+        },
     }
 }
 
@@ -57,4 +60,19 @@ fn constantInstruction(name: []const u8, chunk: *Chunk, offset: u32) u32 {
     print("'\n", .{});
 
     return offset + 2;
+}
+
+fn constantLongInstruction(name: []const u8, chunk: *Chunk, offset: u32) u32 {
+    var constIndex: u32 = 0;
+    inline for (1..4) |i| {
+        const byte: u32 = chunk.code.items[offset + i];
+        constIndex |= byte << ((3 - i) * 8);
+    }
+    const constValue = chunk.constants.values.items[constIndex];
+
+    print("{s: <16}{d: <4}'", .{ name, constIndex });
+    valueLib.printValue(constValue);
+    print("'\n", .{});
+
+    return offset + 4;
 }
