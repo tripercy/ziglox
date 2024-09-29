@@ -27,7 +27,29 @@ pub const Chunk = struct {
 
     pub fn writeChunk(this: *Chunk, byte: u8, line: u32) !void {
         try this.code.append(byte);
-        try this.lines.append(line);
+
+        if (this.lines.items.len == 0) {
+            try this.lines.append(line);
+            try this.lines.append(0);
+        }
+        const linesSize = this.lines.items.len;
+        if (this.lines.items[linesSize - 2] == line) {
+            this.lines.items[linesSize - 1] += 1;
+        } else {
+            try this.lines.append(line);
+            try this.lines.append(1);
+        }
+    }
+
+    pub fn getLine(this: *Chunk, opIndex: u32) u32 {
+        var i: u32 = 0;
+        var indexPassed = this.lines.items[1];
+        while (indexPassed <= opIndex) {
+            i += 2;
+            indexPassed += this.lines.items[i + 1];
+        }
+        // std.debug.print("{d} - {d}\n", .{ opIndex, i });
+        return this.lines.items[i];
     }
 
     pub fn addConstant(this: *Chunk, value: valueLib.Value) !u8 {
