@@ -16,15 +16,15 @@ pub fn disassembleChunk(chunk: *Chunk, chunkName: []const u8) void {
         if (disassembleInstruction(chunk, offset)) |actualOffset| {
             offset = actualOffset;
         } else |_| {
-            print("Failed to disassemble code {b:0^4} at offset {d}\n", .{ chunk.code.items[offset], offset });
+            print("Failed to disassemble code {b:0>4} at offset {d}\n", .{ chunk.code.items[offset], offset });
             return;
         }
     }
 }
 
-fn disassembleInstruction(chunk: *Chunk, offset: u32) !u32 {
+pub fn disassembleInstruction(chunk: *Chunk, offset: u32) !u32 {
     const code = chunk.code.items[offset];
-    print("{b:0^4} ", .{code});
+    print("{b:0>4} ", .{code});
 
     const currLine = chunk.getLine(offset);
     if (offset > 0 and currLine == chunk.getLine(offset - 1)) {
