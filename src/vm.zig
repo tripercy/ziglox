@@ -8,6 +8,8 @@ const Chunk = chunkLib.Chunk;
 const OpCode = chunkLib.OpCode;
 const Value = valueLib.Value;
 
+const STACK_MAX = 256;
+
 pub const InterpretResult = enum {
     OK,
     COMPILE_ERROR,
@@ -17,11 +19,15 @@ pub const InterpretResult = enum {
 pub const VM = struct {
     chunk: *Chunk,
     ip: u32,
+    stack: [STACK_MAX]Value,
+    stackTop: u32,
 
     pub fn init() VM {
         return VM{
             .chunk = undefined,
             .ip = undefined,
+            .stack = [_]Value{0} ** STACK_MAX,
+            .stackTop = 0,
         };
     }
 
@@ -35,24 +41,43 @@ pub const VM = struct {
         return this.run();
     }
 
+    pub fn push(this: *VM, value: Value) void {
+        this.stack[this.stackTop] = value;
+        this.stackTop += 1;
+    }
+
+    pub fn pop(this: *VM) Value {
+        this.stackTop -= 1;
+        return this.stack[this.stackTop];
+    }
+
     pub fn run(this: *VM) InterpretResult {
         while (true) {
             if (config.DEBUG_TRACE_EXECUTION) {
+                std.debug.print("{c: >8}", .{' '});
+                for (0..this.stackTop) |slot| {
+                    std.debug.print("[ ", .{});
+                    valueLib.printValue(this.stack[slot]);
+                    std.debug.print(" ]", .{});
+                }
+                std.debug.print("\n", .{});
                 _ = debug.disassembleInstruction(this.chunk, this.ip) catch 0;
             }
 
             const instruction: OpCode = @enumFromInt(this.readByte());
             switch (instruction) {
                 .RETURN => {
+                    valueLib.printValue(this.pop());
+                    std.debug.print("\n", .{});
                     return .OK;
                 },
                 .CONSTANT => {
                     const constant: Value = this.readConst();
-                    std.debug.print("{d}\n", .{constant});
+                    this.push(constant);
                 },
                 .CONSTANT_LONG => {
                     const constant: Value = this.readConstLong();
-                    std.debug.print("{d}\n", .{constant});
+                    this.push(constant);
                 },
             }
         }
