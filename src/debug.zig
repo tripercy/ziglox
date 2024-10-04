@@ -43,6 +43,21 @@ pub fn disassembleInstruction(chunk: *Chunk, offset: u32) !u32 {
         .CONSTANT_LONG => {
             return constantLongInstruction("CONSTANT_LONG", chunk, offset);
         },
+        .NEGATE => {
+            return simpleInstruction("NEGATE", offset);
+        },
+        .ADD => {
+            return simpleInstruction("ADD", offset);
+        },
+        .SUBTRACT => {
+            return simpleInstruction("SUBTRACT", offset);
+        },
+        .MULTIPLY => {
+            return simpleInstruction("MULTIPLY", offset);
+        },
+        .DIVIDE => {
+            return simpleInstruction("DIVIDE", offset);
+        },
     }
 }
 

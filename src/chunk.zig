@@ -5,6 +5,11 @@ pub const OpCode = enum(u8) {
     RETURN,
     CONSTANT,
     CONSTANT_LONG,
+    NEGATE,
+    ADD,
+    SUBTRACT,
+    MULTIPLY,
+    DIVIDE,
 };
 
 pub const Chunk = struct {

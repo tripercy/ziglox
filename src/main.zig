@@ -10,11 +10,12 @@ pub fn main() !void {
     var chunk = Chunk.init(std.heap.page_allocator);
     defer chunk.deinit();
 
-    const constant = try chunk.addConstant(3);
-    try chunk.writeChunk(@intFromEnum(OpCode.CONSTANT), 125);
-    try chunk.writeChunk(@intCast(constant), 125);
-    try chunk.writeConstant(69.42, 126);
-    try chunk.writeChunk(@intFromEnum(OpCode.RETURN), 130);
+    try chunk.writeConstant(1.2, 1);
+    try chunk.writeConstant(3.4, 1);
+    try chunk.writeChunk(@intFromEnum(OpCode.ADD), 1);
+    try chunk.writeConstant(5.6, 1);
+    try chunk.writeChunk(@intFromEnum(OpCode.DIVIDE), 1);
+    try chunk.writeChunk(@intFromEnum(OpCode.RETURN), 132);
 
     var vm = vmLib.VM.init();
     defer vm.deinit();

@@ -79,6 +79,12 @@ pub const VM = struct {
                     const constant: Value = this.readConstLong();
                     this.push(constant);
                 },
+                .NEGATE => {
+                    this.push(-this.pop());
+                },
+                .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE => {
+                    this.binaryOp(instruction);
+                },
             }
         }
         return .OK;
@@ -102,5 +108,18 @@ pub const VM = struct {
         constIndex |= @as(u32, this.readByte());
 
         return this.chunk.constants.values.items[constIndex];
+    }
+
+    fn binaryOp(this: *VM, op: OpCode) void {
+        const b = this.pop();
+        const a = this.pop();
+        const c: Value = switch (op) {
+            .ADD => a + b,
+            .SUBTRACT => a - b,
+            .MULTIPLY => a * b,
+            .DIVIDE => a / b,
+            else => unreachable,
+        };
+        this.push(c);
     }
 };
