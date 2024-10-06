@@ -35,9 +35,8 @@ pub const VM = struct {
         _ = this;
     }
 
-    pub fn interpret(this: *VM, chunk: *Chunk) InterpretResult {
-        this.chunk = chunk;
-        this.ip = 0;
+    pub fn interpret(this: *VM, source: []const u8) InterpretResult {
+        _ = source; // autofix
         return this.run();
     }
 
