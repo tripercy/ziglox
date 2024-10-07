@@ -34,8 +34,7 @@ fn repl(vm: *vmLib.VM) !void {
         if (line.len == 0) {
             break;
         }
-        _ = vm; // autofix
-        // _ = vm.interpret(&buffer);
+        _ = vm.interpret(line);
     }
 }
 
@@ -43,15 +42,13 @@ fn runFile(vm: *vmLib.VM, path: []const u8) !void {
     const source = try readFile(std.heap.page_allocator, path);
     defer std.heap.page_allocator.free(source);
 
-    std.debug.print("{s}\n", .{source});
-    _ = vm; // autofix
-    // const result = vm.interpret(source);
-    //
-    // switch (result) {
-    //     .COMPILE_ERROR => std.process.exit(65),
-    //     .RUNTIME_ERROR => std.process.exit(70),
-    //     else => {},
-    // }
+    const result = vm.interpret(source);
+
+    switch (result) {
+        .COMPILE_ERROR => std.process.exit(65),
+        .RUNTIME_ERROR => std.process.exit(70),
+        else => {},
+    }
 }
 
 fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {

@@ -3,6 +3,7 @@ const valueLib = @import("value.zig");
 const std = @import("std");
 const debug = @import("debug.zig");
 const config = @import("config.zig");
+const compiler = @import("compiler.zig");
 
 const Chunk = chunkLib.Chunk;
 const OpCode = chunkLib.OpCode;
@@ -36,8 +37,10 @@ pub const VM = struct {
     }
 
     pub fn interpret(this: *VM, source: []const u8) InterpretResult {
-        _ = source; // autofix
-        return this.run();
+        _ = this; // autofix
+        compiler.compile(source);
+
+        return InterpretResult.OK;
     }
 
     pub fn push(this: *VM, value: Value) void {
