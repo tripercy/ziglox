@@ -48,6 +48,10 @@ pub const VM = struct {
             return .COMPILE_ERROR;
         }
 
+        if (config.DEBUG_PRINT_CODE) {
+            debug.disassembleChunk(this.chunk, "Interpreted chunk");
+        }
+
         this.ip = 0;
         const result = this.run();
 
