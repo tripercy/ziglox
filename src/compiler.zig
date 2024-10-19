@@ -1,28 +1,227 @@
 const scannerLib = @import("scanner.zig");
 const std = @import("std");
+const chunkLib = @import("chunk.zig");
+const valueLib = @import("value.zig");
 
 const Scanner = scannerLib.Scanner;
+const Token = scannerLib.Token;
 const TokenType = scannerLib.TokenType;
+const Chunk = chunkLib.Chunk;
+const OpCode = chunkLib.OpCode;
+const Value = valueLib.Value;
+
 const print = std.debug.print;
 
-pub fn compile(source: []const u8) void {
+var compilingChunk: *Chunk = undefined;
+
+pub fn compile(source: []const u8, chunk: *Chunk) !bool {
+    compilingChunk = chunk;
     var scanner: Scanner = undefined;
-    scanner = Scanner.initScanner(source);
-    var line: u32 = 0;
+    scanner = Scanner.init(source);
 
-    while (true) {
-        const token = scanner.scanToken();
-        if (token.line != line) {
-            line = token.line;
-            print("{d: >4} ", .{line});
-        } else {
-            print("{c: >4} ", .{'|'});
-        }
-        const tokenType = std.enums.tagName(scannerLib.TokenType, token.type).?;
-        print("{s: >15} '{s}'\n", .{ tokenType, token.source });
+    var parser: Parser = undefined;
+    parser = Parser.init(&scanner);
+    defer parser.endCompiler();
 
-        if (token.type == .EOF or token.type == .ERROR) {
-            break;
+    parser.advance();
+    parser.expression();
+    parser.consume(.EOF, "Expected end of expression");
+
+    return !parser.hadError;
+}
+
+fn currentChunk() *Chunk {
+    return compilingChunk;
+}
+
+const ParseRule = struct {
+    prefix: ?*const fn (*Parser) void = null,
+    infix: ?*const fn (*Parser) void = null,
+    precedent: Precedence = .NONE,
+};
+
+// zig fmt: off
+const rules = std.EnumMap(TokenType, ParseRule).init(.{
+    .LEFT_PAREN     =   .{ .prefix = Parser.grouping    , .infix = null                 , .precedent = .NONE     },
+    .MINUS          =   .{ .prefix = Parser.unary       , .infix = Parser.binary        , .precedent = .TERM     },
+    .PLUS           =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .TERM     },
+    .SLASH          =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .FACTOR   },
+    .STAR           =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .FACTOR   },
+    .NUMBER         =   .{ .prefix = Parser.number      , .infix = null                 , .precedent = .NONE     },
+    .RIGHT_PAREN    =   .{ .prefix = null               , .infix = null                 , .precedent = .NONE     },
+    .EOF            =   .{ .prefix = null               , .infix = null                 , .precedent = .NONE     },
+});
+// zig fmt: on
+
+const Precedence = enum(u32) {
+    NONE,
+    ASSIGNMENT,
+    AND,
+    OR,
+    EQUALITY,
+    COMPARISION,
+    TERM,
+    FACTOR,
+    UNARY,
+    CALL,
+    PRIMARY,
+
+    pub fn next(this: Precedence) Precedence {
+        return @enumFromInt(@intFromEnum(this) + 1);
+    }
+};
+
+const Parser = struct {
+    scanner: *Scanner,
+
+    previous: Token,
+    current: Token,
+    hadError: bool,
+    panicMode: bool,
+
+    pub fn init(scanner: *Scanner) Parser {
+        return Parser{
+            .scanner = scanner,
+            .previous = undefined,
+            .current = undefined,
+            .hadError = false,
+            .panicMode = false,
+        };
+    }
+
+    pub fn advance(this: *Parser) void {
+        this.previous = this.current;
+
+        while (true) {
+            this.current = this.scanner.scanToken();
+            if (this.current.tokenType != .ERROR) {
+                break;
+            }
+            this.errorAtCurrent(this.current.source);
         }
     }
-}
+
+    pub fn consume(this: *Parser, tokenType: TokenType, message: []const u8) void {
+        if (this.current.tokenType == tokenType) {
+            this.advance();
+            return;
+        }
+
+        this.errorAtCurrent(message);
+    }
+
+    pub fn expression(this: *Parser) void {
+        this.parsePrecedence(.ASSIGNMENT);
+    }
+
+    pub fn parsePrecedence(this: *Parser, precedence: Precedence) void {
+        this.advance();
+        const rule = rules.getPtrConst(this.previous.tokenType).?;
+
+        if (rule.prefix == null) {
+            this.err("Expected expression");
+            return;
+        }
+
+        const prefixRule = rule.prefix.?;
+        prefixRule(this);
+
+        while (@intFromEnum(precedence) <= @intFromEnum(rules.get(this.current.tokenType).?.precedent)) {
+            this.advance();
+            const infixRule = rules.get(this.previous.tokenType).?.infix.?;
+            infixRule(this);
+        }
+    }
+
+    pub fn emitByte(this: *Parser, byte: u8) void {
+        _ = currentChunk().writeChunk(byte, this.previous.line) catch {};
+    }
+
+    pub fn emiteBytes(this: *Parser, byte1: u8, byte2: u8) void {
+        this.emitByte(byte1);
+        this.emitByte(byte2);
+    }
+
+    fn number(this: *Parser) void {
+        const value = std.fmt.parseFloat(Value, this.previous.source) catch 0;
+        this.emitConstant(value);
+    }
+
+    fn grouping(this: *Parser) void {
+        this.expression();
+        this.consume(.RIGHT_PAREN, "Expected ')' after expression");
+    }
+
+    fn unary(this: *Parser) void {
+        const opType = this.previous.tokenType;
+
+        this.parsePrecedence(.UNARY);
+
+        switch (opType) {
+            .MINUS => this.emitByte(@intFromEnum(OpCode.NEGATE)),
+            else => unreachable,
+        }
+    }
+
+    fn binary(this: *Parser) void {
+        const opType = this.previous.tokenType;
+        const rule = rules.get(opType).?;
+        this.parsePrecedence(rule.precedent.next());
+
+        switch (opType) {
+            .PLUS => this.emitByte(@intFromEnum(OpCode.ADD)),
+            .MINUS => this.emitByte(@intFromEnum(OpCode.SUBTRACT)),
+            .STAR => this.emitByte(@intFromEnum(OpCode.MULTIPLY)),
+            .SLASH => this.emitByte(@intFromEnum(OpCode.DIVIDE)),
+            else => unreachable,
+        }
+    }
+
+    pub fn endCompiler(this: *Parser) void {
+        _ = this.emitReturn() catch {};
+    }
+
+    fn emitReturn(this: *Parser) !void {
+        this.emitByte(@intFromEnum(OpCode.RETURN));
+    }
+
+    fn emitConstant(this: *Parser, value: Value) void {
+        this.emiteBytes(@intFromEnum(OpCode.CONSTANT), this.makeConstant(value));
+    }
+
+    fn makeConstant(this: *Parser, value: Value) u8 {
+        const constID = currentChunk().addConstant(value) catch 1 << 8;
+
+        if (constID > 1 << 8 - 1) {
+            this.err("Too many constants in one chunk");
+            return 0;
+        }
+
+        return @intCast(constID);
+    }
+
+    fn errorAtCurrent(this: *Parser, message: []const u8) void {
+        this.errorAt(&this.current, message);
+    }
+
+    fn err(this: *Parser, message: []const u8) void {
+        this.errorAt(&this.previous, message);
+    }
+
+    fn errorAt(this: *Parser, token: *Token, message: []const u8) void {
+        if (this.panicMode) {
+            return;
+        }
+        this.panicMode = true;
+        print("[line {d}] Error", .{token.line});
+
+        if (token.tokenType == .EOF) {
+            print(" at end", .{});
+        } else if (token.tokenType != .ERROR) {
+            print(" at '{s}'", .{token.source});
+        }
+
+        print(": {s}\n", .{message});
+        this.hadError = true;
+    }
+};

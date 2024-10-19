@@ -6,7 +6,7 @@ pub const Scanner = struct {
     current: u32,
     line: u32,
 
-    pub fn initScanner(source: []const u8) Scanner {
+    pub fn init(source: []const u8) Scanner {
         return Scanner{
             .source = source,
             .start = 0,
@@ -210,7 +210,7 @@ pub const Scanner = struct {
 
     fn makeToken(this: *Scanner, tokenType: TokenType) Token {
         return Token{
-            .type = tokenType,
+            .tokenType = tokenType,
             .source = this.source[this.start..this.current],
             .line = this.line,
         };
@@ -218,7 +218,7 @@ pub const Scanner = struct {
 
     fn errorToken(this: *Scanner, message: []const u8) Token {
         return Token{
-            .type = .ERROR,
+            .tokenType = .ERROR,
             .source = message,
             .line = this.line,
         };
@@ -226,7 +226,7 @@ pub const Scanner = struct {
 };
 
 pub const Token = struct {
-    type: TokenType,
+    tokenType: TokenType,
     source: []const u8,
     line: u32,
 };

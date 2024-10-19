@@ -22,13 +22,15 @@ pub const VM = struct {
     ip: u32,
     stack: [STACK_MAX]Value,
     stackTop: u32,
+    allocator: std.mem.Allocator,
 
-    pub fn init() VM {
+    pub fn init(allocator: std.mem.Allocator) VM {
         return VM{
             .chunk = undefined,
             .ip = undefined,
             .stack = [_]Value{0} ** STACK_MAX,
             .stackTop = 0,
+            .allocator = allocator,
         };
     }
 
@@ -37,10 +39,19 @@ pub const VM = struct {
     }
 
     pub fn interpret(this: *VM, source: []const u8) InterpretResult {
-        _ = this; // autofix
-        compiler.compile(source);
+        var chunk = Chunk.init(this.allocator);
+        defer chunk.deinit();
+        this.chunk = &chunk;
 
-        return InterpretResult.OK;
+        const compiled = compiler.compile(source, this.chunk) catch false;
+        if (!compiled) {
+            return .COMPILE_ERROR;
+        }
+
+        this.ip = 0;
+        const result = this.run();
+
+        return result;
     }
 
     pub fn push(this: *VM, value: Value) void {
@@ -49,11 +60,18 @@ pub const VM = struct {
     }
 
     pub fn pop(this: *VM) Value {
-        this.stackTop -= 1;
-        return this.stack[this.stackTop];
+        if (this.stackTop > 0) {
+            this.stackTop -= 1;
+            return this.stack[this.stackTop];
+        }
+        return 0;
     }
 
     pub fn run(this: *VM) InterpretResult {
+        if (this.chunk.code.items.len == 0) {
+            return .OK;
+        }
+
         while (true) {
             if (config.DEBUG_TRACE_EXECUTION) {
                 std.debug.print("{c: >8}", .{' '});

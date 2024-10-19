@@ -10,10 +10,14 @@ const stdin = std.io.getStdIn().reader();
 const stdout = std.io.getStdOut().writer();
 
 pub fn main() !void {
-    var vm = vmLib.VM.init();
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
+
+    var vm = vmLib.VM.init(allocator);
     defer vm.deinit();
 
-    const allocator = std.heap.page_allocator;
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
@@ -34,7 +38,8 @@ fn repl(vm: *vmLib.VM) !void {
         if (line.len == 0) {
             break;
         }
-        _ = vm.interpret(line);
+        buffer[line.len] = 0;
+        _ = vm.interpret(buffer[0 .. line.len + 1]);
     }
 }
 
