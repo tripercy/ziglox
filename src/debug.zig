@@ -58,6 +58,15 @@ pub fn disassembleInstruction(chunk: *Chunk, offset: u32) !u32 {
         .DIVIDE => {
             return simpleInstruction("DIVIDE", offset);
         },
+        .NIL => {
+            return simpleInstruction("NIL", offset);
+        },
+        .TRUE => {
+            return simpleInstruction("TRUE", offset);
+        },
+        .FALSE => {
+            return simpleInstruction("FALSE", offset);
+        },
     }
 }
 

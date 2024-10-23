@@ -28,7 +28,7 @@ pub const VM = struct {
         return VM{
             .chunk = undefined,
             .ip = undefined,
-            .stack = [_]Value{0} ** STACK_MAX,
+            .stack = [_]Value{.{ .nil = {} }} ** STACK_MAX,
             .stackTop = 0,
             .allocator = allocator,
         };
@@ -68,7 +68,11 @@ pub const VM = struct {
             this.stackTop -= 1;
             return this.stack[this.stackTop];
         }
-        return 0;
+        return .{ .nil = {} };
+    }
+
+    pub fn peek(this: *VM, distance: u32) Value {
+        return this.stack[this.stackTop - 1 - distance];
     }
 
     pub fn run(this: *VM) InterpretResult {
@@ -104,11 +108,21 @@ pub const VM = struct {
                     this.push(constant);
                 },
                 .NEGATE => {
-                    this.push(-this.pop());
+                    if (this.peek(0) != .number) {
+                        this.runtimeError("Operand must be number.", .{});
+                        return .RUNTIME_ERROR;
+                    }
+                    this.push(valueLib.numberVal(-this.pop().number));
                 },
                 .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE => {
-                    this.binaryOp(instruction);
+                    const success = this.binaryOp(instruction);
+                    if (!success) {
+                        return .RUNTIME_ERROR;
+                    }
                 },
+                .NIL => this.push(valueLib.nilVal()),
+                .TRUE => this.push(valueLib.boolVal(true)),
+                .FALSE => this.push(valueLib.boolVal(false)),
             }
         }
         return .OK;
@@ -134,16 +148,32 @@ pub const VM = struct {
         return this.chunk.constants.values.items[constIndex];
     }
 
-    fn binaryOp(this: *VM, op: OpCode) void {
-        const b = this.pop();
-        const a = this.pop();
-        const c: Value = switch (op) {
+    fn binaryOp(this: *VM, op: OpCode) bool {
+        if (this.peek(0) != .number or this.peek(1) != .number) {
+            this.runtimeError("Operands must be numbers.", .{});
+            return false;
+        }
+
+        const b = this.pop().number;
+        const a = this.pop().number;
+
+        const c: f64 = switch (op) {
             .ADD => a + b,
             .SUBTRACT => a - b,
             .MULTIPLY => a * b,
             .DIVIDE => a / b,
             else => unreachable,
         };
-        this.push(c);
+        this.push(valueLib.numberVal(c));
+        return true;
+    }
+
+    fn runtimeError(this: *VM, comptime format: []const u8, args: anytype) void {
+        std.debug.print(format, args);
+        std.debug.print("\n", .{});
+
+        const line = this.chunk.getLine(this.ip);
+        std.debug.print("[line {}] in script\n", .{line});
+        this.stackTop = 0;
     }
 };

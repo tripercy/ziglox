@@ -50,6 +50,9 @@ const rules = std.EnumMap(TokenType, ParseRule).init(.{
     .NUMBER         =   .{ .prefix = Parser.number      , .infix = null                 , .precedent = .NONE     },
     .RIGHT_PAREN    =   .{ .prefix = null               , .infix = null                 , .precedent = .NONE     },
     .EOF            =   .{ .prefix = null               , .infix = null                 , .precedent = .NONE     },
+    .NIL            =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE     },
+    .TRUE           =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE     },
+    .FALSE          =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE     },
 });
 // zig fmt: on
 
@@ -143,8 +146,17 @@ const Parser = struct {
     }
 
     fn number(this: *Parser) void {
-        const value = std.fmt.parseFloat(Value, this.previous.source) catch 0;
-        this.emitConstant(value);
+        const value = std.fmt.parseFloat(f64, this.previous.source) catch 0;
+        this.emitConstant(valueLib.numberVal(value));
+    }
+
+    fn literal(this: *Parser) void {
+        switch (this.previous.tokenType) {
+            .FALSE => this.emitByte(@intFromEnum(OpCode.FALSE)),
+            .TRUE => this.emitByte(@intFromEnum(OpCode.TRUE)),
+            .NIL => this.emitByte(@intFromEnum(OpCode.NIL)),
+            else => unreachable,
+        }
     }
 
     fn grouping(this: *Parser) void {

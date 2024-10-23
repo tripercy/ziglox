@@ -1,6 +1,22 @@
 const std = @import("std");
 
-pub const Value = f32;
+pub const Value = union(enum) {
+    boolean: bool,
+    number: f64,
+    nil,
+};
+
+pub fn boolVal(value: bool) Value {
+    return Value{ .boolean = value };
+}
+
+pub fn nilVal() Value {
+    return Value{ .nil = {} };
+}
+
+pub fn numberVal(value: f64) Value {
+    return Value{ .number = value };
+}
 
 pub const ValueArr = struct {
     values: std.ArrayList(Value),
@@ -19,5 +35,9 @@ pub const ValueArr = struct {
 };
 
 pub fn printValue(value: Value) void {
-    std.debug.print("{d}", .{value});
+    switch (value) {
+        .number => |num| std.debug.print("{d}", .{num}),
+        .boolean => |boolean| std.debug.print("{s}", .{if (boolean) "TRUE" else "FALSE"}),
+        .nil => std.debug.print("NIL", .{}),
+    }
 }
