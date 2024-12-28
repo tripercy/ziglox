@@ -123,6 +123,7 @@ pub const VM = struct {
                 .NIL => this.push(valueLib.nilVal()),
                 .TRUE => this.push(valueLib.boolVal(true)),
                 .FALSE => this.push(valueLib.boolVal(false)),
+                .NOT => this.push(valueLib.boolVal(isFalsey(this.pop()))),
             }
         }
         return .OK;
@@ -177,3 +178,7 @@ pub const VM = struct {
         this.stackTop = 0;
     }
 };
+
+fn isFalsey(value: Value) bool {
+    return value == .nil or (value == .boolean and !value.boolean);
+}

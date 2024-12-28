@@ -13,6 +13,7 @@ pub const OpCode = enum(u8) {
     NIL,
     TRUE,
     FALSE,
+    NOT,
 };
 
 pub const Chunk = struct {

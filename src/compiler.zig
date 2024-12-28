@@ -53,6 +53,7 @@ const rules = std.EnumMap(TokenType, ParseRule).init(.{
     .NIL            =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE     },
     .TRUE           =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE     },
     .FALSE          =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE     },
+    .BANG           =   .{ .prefix = Parser.unary       , .infix = null                 , .precedent = .NONE     },
 });
 // zig fmt: on
 
@@ -171,6 +172,7 @@ const Parser = struct {
 
         switch (opType) {
             .MINUS => this.emitByte(@intFromEnum(OpCode.NEGATE)),
+            .BANG => this.emitByte(@intFromEnum(OpCode.NOT)),
             else => unreachable,
         }
     }
