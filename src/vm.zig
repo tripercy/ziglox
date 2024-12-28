@@ -114,7 +114,7 @@ pub const VM = struct {
                     }
                     this.push(valueLib.numberVal(-this.pop().number));
                 },
-                .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE => {
+                .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .GREATER, .LESS => {
                     const success = this.binaryOp(instruction);
                     if (!success) {
                         return .RUNTIME_ERROR;
@@ -124,6 +124,11 @@ pub const VM = struct {
                 .TRUE => this.push(valueLib.boolVal(true)),
                 .FALSE => this.push(valueLib.boolVal(false)),
                 .NOT => this.push(valueLib.boolVal(isFalsey(this.pop()))),
+                .EQUAL => {
+                    const b = this.pop();
+                    const a = this.pop();
+                    this.push(valueLib.boolVal(valueLib.valuesEqual(a, b)));
+                },
             }
         }
         return .OK;
@@ -158,14 +163,24 @@ pub const VM = struct {
         const b = this.pop().number;
         const a = this.pop().number;
 
-        const c: f64 = switch (op) {
-            .ADD => a + b,
-            .SUBTRACT => a - b,
-            .MULTIPLY => a * b,
-            .DIVIDE => a / b,
-            else => unreachable,
-        };
-        this.push(valueLib.numberVal(c));
+        var mathRes: f64 = 0;
+        var boolRes: bool = false;
+        switch (op) {
+            // zig fmt: off
+            .ADD        => mathRes = a + b,
+            .SUBTRACT   => mathRes = a - b,
+            .MULTIPLY   => mathRes = a * b,
+            .DIVIDE     => mathRes = a / b,
+            .GREATER    => boolRes = a > b,
+            .LESS       => boolRes = a < b,
+            else        => unreachable,
+            // zig fmt: on
+        }
+
+        switch (op) {
+            .GREATER, .LESS => this.push(valueLib.boolVal(boolRes)),
+            else => this.push(valueLib.numberVal(mathRes)),
+        }
         return true;
     }
 

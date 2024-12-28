@@ -14,6 +14,9 @@ pub const OpCode = enum(u8) {
     TRUE,
     FALSE,
     NOT,
+    EQUAL,
+    GREATER,
+    LESS,
 };
 
 pub const Chunk = struct {

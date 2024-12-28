@@ -18,6 +18,10 @@ pub fn numberVal(value: f64) Value {
     return Value{ .number = value };
 }
 
+pub fn valuesEqual(a: Value, b: Value) bool {
+    return std.meta.eql(a, b);
+}
+
 pub const ValueArr = struct {
     values: std.ArrayList(Value),
 

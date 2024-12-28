@@ -42,18 +42,24 @@ const ParseRule = struct {
 
 // zig fmt: off
 const rules = std.EnumMap(TokenType, ParseRule).init(.{
-    .LEFT_PAREN     =   .{ .prefix = Parser.grouping    , .infix = null                 , .precedent = .NONE     },
-    .MINUS          =   .{ .prefix = Parser.unary       , .infix = Parser.binary        , .precedent = .TERM     },
-    .PLUS           =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .TERM     },
-    .SLASH          =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .FACTOR   },
-    .STAR           =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .FACTOR   },
-    .NUMBER         =   .{ .prefix = Parser.number      , .infix = null                 , .precedent = .NONE     },
-    .RIGHT_PAREN    =   .{ .prefix = null               , .infix = null                 , .precedent = .NONE     },
-    .EOF            =   .{ .prefix = null               , .infix = null                 , .precedent = .NONE     },
-    .NIL            =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE     },
-    .TRUE           =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE     },
-    .FALSE          =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE     },
-    .BANG           =   .{ .prefix = Parser.unary       , .infix = null                 , .precedent = .NONE     },
+    .LEFT_PAREN     =   .{ .prefix = Parser.grouping    , .infix = null                 , .precedent = .NONE        },
+    .MINUS          =   .{ .prefix = Parser.unary       , .infix = Parser.binary        , .precedent = .TERM        },
+    .PLUS           =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .TERM        },
+    .SLASH          =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .FACTOR      },
+    .STAR           =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .FACTOR      },
+    .NUMBER         =   .{ .prefix = Parser.number      , .infix = null                 , .precedent = .NONE        },
+    .RIGHT_PAREN    =   .{ .prefix = null               , .infix = null                 , .precedent = .NONE        },
+    .EOF            =   .{ .prefix = null               , .infix = null                 , .precedent = .NONE        },
+    .NIL            =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE        },
+    .TRUE           =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE        },
+    .FALSE          =   .{ .prefix = Parser.literal     , .infix = null                 , .precedent = .NONE        },
+    .BANG           =   .{ .prefix = Parser.unary       , .infix = null                 , .precedent = .NONE        },
+    .BANG_EQUAL     =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .EQUALITY    },
+    .EQUAL_EQUAL    =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .EQUALITY    },
+    .GREATER        =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .COMPARISION },
+    .GREATER_EQUAL  =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .COMPARISION },
+    .LESS           =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .COMPARISION },
+    .LESS_EQUAL     =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .COMPARISION },
 });
 // zig fmt: on
 
@@ -141,7 +147,7 @@ const Parser = struct {
         _ = currentChunk().writeChunk(byte, this.previous.line) catch {};
     }
 
-    pub fn emiteBytes(this: *Parser, byte1: u8, byte2: u8) void {
+    pub fn emitBytes(this: *Parser, byte1: u8, byte2: u8) void {
         this.emitByte(byte1);
         this.emitByte(byte2);
     }
@@ -187,6 +193,15 @@ const Parser = struct {
             .MINUS => this.emitByte(@intFromEnum(OpCode.SUBTRACT)),
             .STAR => this.emitByte(@intFromEnum(OpCode.MULTIPLY)),
             .SLASH => this.emitByte(@intFromEnum(OpCode.DIVIDE)),
+
+            .EQUAL_EQUAL => this.emitByte(@intFromEnum(OpCode.EQUAL)),
+            .BANG_EQUAL => this.emitBytes(@intFromEnum(OpCode.EQUAL), @intFromEnum(OpCode.NOT)),
+
+            .GREATER => this.emitByte(@intFromEnum(OpCode.GREATER)),
+            .GREATER_EQUAL => this.emitBytes(@intFromEnum(OpCode.LESS), @intFromEnum(OpCode.NOT)),
+
+            .LESS => this.emitByte(@intFromEnum(OpCode.LESS)),
+            .LESS_EQUAL => this.emitBytes(@intFromEnum(OpCode.GREATER), @intFromEnum(OpCode.NOT)),
             else => unreachable,
         }
     }
@@ -200,7 +215,7 @@ const Parser = struct {
     }
 
     fn emitConstant(this: *Parser, value: Value) void {
-        this.emiteBytes(@intFromEnum(OpCode.CONSTANT), this.makeConstant(value));
+        this.emitBytes(@intFromEnum(OpCode.CONSTANT), this.makeConstant(value));
     }
 
     fn makeConstant(this: *Parser, value: Value) u8 {

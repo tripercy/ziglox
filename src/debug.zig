@@ -34,42 +34,23 @@ pub fn disassembleInstruction(chunk: *Chunk, offset: u32) !u32 {
     }
 
     switch (try std.meta.intToEnum(OpCode, code)) {
-        .RETURN => {
-            return simpleInstruction("RETURN", offset);
-        },
-        .CONSTANT => {
-            return constantInstruction("CONSTANT", chunk, offset);
-        },
-        .CONSTANT_LONG => {
-            return constantLongInstruction("CONSTANT_LONG", chunk, offset);
-        },
-        .NEGATE => {
-            return simpleInstruction("NEGATE", offset);
-        },
-        .ADD => {
-            return simpleInstruction("ADD", offset);
-        },
-        .SUBTRACT => {
-            return simpleInstruction("SUBTRACT", offset);
-        },
-        .MULTIPLY => {
-            return simpleInstruction("MULTIPLY", offset);
-        },
-        .DIVIDE => {
-            return simpleInstruction("DIVIDE", offset);
-        },
-        .NIL => {
-            return simpleInstruction("NIL", offset);
-        },
-        .TRUE => {
-            return simpleInstruction("TRUE", offset);
-        },
-        .FALSE => {
-            return simpleInstruction("FALSE", offset);
-        },
-        .NOT => {
-            return simpleInstruction("NOT", offset);
-        },
+        // zig fmt: off
+        .RETURN         => return simpleInstruction("RETURN", offset),
+        .CONSTANT       => return constantInstruction("CONSTANT", chunk, offset),
+        .CONSTANT_LONG  => return constantLongInstruction("CONSTANT_LONG", chunk, offset),
+        .NEGATE         => return simpleInstruction("NEGATE", offset),
+        .ADD            => return simpleInstruction("ADD", offset),
+        .SUBTRACT       => return simpleInstruction("SUBTRACT", offset),
+        .MULTIPLY       => return simpleInstruction("MULTIPLY", offset),
+        .DIVIDE         => return simpleInstruction("DIVIDE", offset),
+        .NIL            => return simpleInstruction("NIL", offset),
+        .TRUE           => return simpleInstruction("TRUE", offset),
+        .FALSE          => return simpleInstruction("FALSE", offset),
+        .NOT            => return simpleInstruction("NOT", offset),
+        .EQUAL          => return simpleInstruction("EQUAL", offset),
+        .GREATER        => return simpleInstruction("GREATER", offset),
+        .LESS           => return simpleInstruction("LESS", offset),
+        // zig fmt: on
     }
 }
 
