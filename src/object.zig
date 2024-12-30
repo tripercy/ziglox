@@ -28,12 +28,16 @@ pub const ObjString = extern struct {
     // length: i32,
     chars: [*:0]u8,
 
-    pub fn copyString(string: []const u8, allocator: std.mem.Allocator) *Obj {
+    pub fn init(chars: [*:0]u8, allocator: std.mem.Allocator) *Obj {
         const obj = newObj(ObjString, allocator);
         obj.obj.type = .STRING;
-        obj.chars = (allocator.dupeZ(u8, string) catch unreachable).ptr;
+        obj.chars = chars;
 
         return &obj.obj;
+    }
+
+    pub fn copyString(string: []const u8, allocator: std.mem.Allocator) *Obj {
+        return ObjString.init((allocator.dupeZ(u8, string) catch unreachable).ptr, allocator);
     }
 
     pub fn deinit(this: *ObjString, allocator: std.mem.Allocator) void {
@@ -41,11 +45,11 @@ pub const ObjString = extern struct {
     }
 };
 
-fn castToObj(obj: anytype) *Obj {
+pub fn castToObj(obj: anytype) *Obj {
     return @as(*Obj, @ptrCast(@alignCast(obj)));
 }
 
-fn castFromObj(obj: *Obj, to: type) to {
+pub fn castFromObj(obj: *Obj, to: type) to {
     return @as(to, @ptrCast(@alignCast(obj)));
 }
 

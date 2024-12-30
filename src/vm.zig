@@ -155,7 +155,30 @@ pub const VM = struct {
         return this.chunk.constants.values.items[constIndex];
     }
 
+    fn concatenate(this: *VM) void {
+        const b = this.pop().obj;
+        const a = this.pop().obj;
+
+        const strObjA = objLib.castFromObj(a, *objLib.ObjString);
+        const strObjB = objLib.castFromObj(b, *objLib.ObjString);
+
+        const strA = std.mem.span(strObjA.chars);
+        const strB = std.mem.span(strObjB.chars);
+
+        const strRes = this.allocator.allocSentinel(u8, strA.len + strB.len, 0) catch unreachable;
+        std.mem.copyForwards(u8, strRes, strA);
+        std.mem.copyForwards(u8, strRes[strA.len..], strB);
+
+        const resObj = objLib.ObjString.init(strRes, this.allocator);
+
+        this.push(valueLib.objVal(resObj));
+    }
+
     fn binaryOp(this: *VM, op: OpCode) bool {
+        if (this.peek(0).isString() and this.peek(1).isString() and op == .ADD) {
+            this.concatenate();
+            return true;
+        }
         if (this.peek(0) != .number or this.peek(1) != .number) {
             this.runtimeError("Operands must be numbers.", .{});
             return false;

@@ -9,6 +9,13 @@ pub const Value = union(enum) {
     number: f64,
     obj: *Obj,
     nil,
+
+    pub fn isString(this: *const Value) bool {
+        if (this.* != .obj) {
+            return false;
+        }
+        return this.obj.type == .STRING;
+    }
 };
 
 pub fn boolVal(value: bool) Value {
@@ -28,7 +35,22 @@ pub fn objVal(obj: *Obj) Value {
 }
 
 pub fn valuesEqual(a: Value, b: Value) bool {
-    return std.meta.eql(a, b);
+    if (std.meta.activeTag(a) != std.meta.activeTag(b)) {
+        return false;
+    }
+    switch (a) {
+        .obj => |obj| {
+            const objA = objLib.castFromObj(obj, *ObjString);
+            const objB = objLib.castFromObj(b.obj, *ObjString);
+
+            const strA = std.mem.span(objA.chars);
+            const strB = std.mem.span(objB.chars);
+
+            return std.mem.eql(u8, strA, strB);
+        },
+        else => return std.meta.eql(a, b),
+    }
+    unreachable;
 }
 
 pub const ValueArr = struct {
