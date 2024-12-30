@@ -2,6 +2,7 @@ const scannerLib = @import("scanner.zig");
 const std = @import("std");
 const chunkLib = @import("chunk.zig");
 const valueLib = @import("value.zig");
+const objLib = @import("object.zig");
 
 const Scanner = scannerLib.Scanner;
 const Token = scannerLib.Token;
@@ -13,9 +14,12 @@ const Value = valueLib.Value;
 const print = std.debug.print;
 
 var compilingChunk: *Chunk = undefined;
+var allocator: std.mem.Allocator = undefined;
 
-pub fn compile(source: []const u8, chunk: *Chunk) !bool {
+pub fn compile(source: []const u8, chunk: *Chunk, alloc: std.mem.Allocator) !bool {
     compilingChunk = chunk;
+    allocator = alloc;
+
     var scanner: Scanner = undefined;
     scanner = Scanner.init(source);
 
@@ -60,6 +64,7 @@ const rules = std.EnumMap(TokenType, ParseRule).init(.{
     .GREATER_EQUAL  =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .COMPARISION },
     .LESS           =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .COMPARISION },
     .LESS_EQUAL     =   .{ .prefix = null               , .infix = Parser.binary        , .precedent = .COMPARISION },
+    .STRING         =   .{ .prefix = Parser.string      , .infix = null                 , .precedent = .NONE        },
 });
 // zig fmt: on
 
@@ -204,6 +209,16 @@ const Parser = struct {
             .LESS_EQUAL => this.emitBytes(@intFromEnum(OpCode.GREATER), @intFromEnum(OpCode.NOT)),
             else => unreachable,
         }
+    }
+
+    fn string(this: *Parser) void {
+        var source = this.previous.source;
+        source = source[1 .. source.len - 1];
+        this.emitConstant(
+            valueLib.objVal(
+                objLib.ObjString.copyString(source, allocator),
+            ),
+        );
     }
 
     pub fn endCompiler(this: *Parser) void {

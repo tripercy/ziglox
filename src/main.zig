@@ -10,10 +10,19 @@ const stdin = std.io.getStdIn().reader();
 const stdout = std.io.getStdOut().writer();
 
 pub fn main() !void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
+    // var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    // defer arena.deinit();
+    //
+    // const allocator = arena.allocator();
 
-    const allocator = arena.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer {
+        switch (gpa.deinit()) {
+            .leak => std.debug.print("Leak(s) detected!\n", .{}),
+            else => {},
+        }
+    }
+    const allocator = gpa.allocator();
 
     var vm = vmLib.VM.init(allocator);
     defer vm.deinit();

@@ -4,6 +4,7 @@ const std = @import("std");
 const debug = @import("debug.zig");
 const config = @import("config.zig");
 const compiler = @import("compiler.zig");
+const objLib = @import("object.zig");
 
 const Chunk = chunkLib.Chunk;
 const OpCode = chunkLib.OpCode;
@@ -35,7 +36,7 @@ pub const VM = struct {
     }
 
     pub fn deinit(this: *VM) void {
-        _ = this;
+        objLib.freeObjects(this.allocator);
     }
 
     pub fn interpret(this: *VM, source: []const u8) InterpretResult {
@@ -43,7 +44,7 @@ pub const VM = struct {
         defer chunk.deinit();
         this.chunk = &chunk;
 
-        const compiled = compiler.compile(source, this.chunk) catch false;
+        const compiled = compiler.compile(source, this.chunk, this.allocator) catch false;
         if (!compiled) {
             return .COMPILE_ERROR;
         }

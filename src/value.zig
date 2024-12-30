@@ -1,8 +1,13 @@
 const std = @import("std");
+const objLib = @import("object.zig");
+
+const Obj = objLib.Obj;
+const ObjString = objLib.ObjString;
 
 pub const Value = union(enum) {
     boolean: bool,
     number: f64,
+    obj: *Obj,
     nil,
 };
 
@@ -16,6 +21,10 @@ pub fn nilVal() Value {
 
 pub fn numberVal(value: f64) Value {
     return Value{ .number = value };
+}
+
+pub fn objVal(obj: *Obj) Value {
+    return Value{ .obj = obj };
 }
 
 pub fn valuesEqual(a: Value, b: Value) bool {
@@ -43,5 +52,15 @@ pub fn printValue(value: Value) void {
         .number => |num| std.debug.print("{d}", .{num}),
         .boolean => |boolean| std.debug.print("{s}", .{if (boolean) "TRUE" else "FALSE"}),
         .nil => std.debug.print("NIL", .{}),
+        .obj => |obj| printObj(obj),
+    }
+}
+
+fn printObj(obj: *Obj) void {
+    switch (obj.type) {
+        .STRING => {
+            const string = @as(*ObjString, @ptrCast(@alignCast(obj)));
+            std.debug.print("{s}", .{string.chars});
+        },
     }
 }
