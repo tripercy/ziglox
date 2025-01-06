@@ -27,11 +27,13 @@ pub const ObjString = extern struct {
     obj: Obj,
     // length: i32,
     chars: [*:0]u8,
+    hash: u32,
 
     pub fn init(chars: [*:0]u8, allocator: std.mem.Allocator) *Obj {
         const obj = newObj(ObjString, allocator);
         obj.obj.type = .STRING;
         obj.chars = chars;
+        obj.hash = hashSTr(chars);
 
         return &obj.obj;
     }
@@ -71,4 +73,15 @@ fn destroyObj(obj: *Obj, allocator: std.mem.Allocator) void {
             allocator.destroy(strObj);
         },
     }
+}
+
+fn hashSTr(string: [*:0]u8) u32 {
+    const key = std.mem.span(string);
+    var hash: u32 = 2166136261;
+
+    for (key) |c| {
+        hash ^= c;
+        hash = @mulWithOverflow(hash, 16777619).@"0";
+    }
+    return hash;
 }
