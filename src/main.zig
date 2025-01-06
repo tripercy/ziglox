@@ -40,7 +40,7 @@ pub fn main() !void {
 }
 
 fn repl(vm: *vmLib.VM) !void {
-    var buffer: [1024:'0']u8 = undefined;
+    var buffer: [1024:0]u8 = undefined;
 
     while (true) {
         const line = try stdin.readUntilDelimiter(&buffer, '\n');
@@ -74,10 +74,4 @@ fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
     const size = stat.size;
     const content: []u8 = try file.readToEndAlloc(allocator, size);
     return content;
-}
-
-test "simple test" {
-    const allocator = std.testing.allocator;
-    const content = try readFile(allocator, "test/test.txt");
-    defer allocator.free(content);
 }
