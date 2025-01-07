@@ -40,13 +40,10 @@ pub fn valuesEqual(a: Value, b: Value) bool {
     }
     switch (a) {
         .obj => |obj| {
-            const objA = objLib.castFromObj(obj, *ObjString);
-            const objB = objLib.castFromObj(b.obj, *ObjString);
-
-            const strA = std.mem.span(objA.chars);
-            const strB = std.mem.span(objB.chars);
-
-            return std.mem.eql(u8, strA, strB);
+            switch (obj.type) {
+                .STRING => return a.obj == b.obj,
+                // else => unreachable,
+            }
         },
         else => return std.meta.eql(a, b),
     }

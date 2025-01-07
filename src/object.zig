@@ -1,5 +1,8 @@
 const std = @import("std");
+const tableLib = @import("table.zig");
+const valLib = @import("value.zig");
 
+pub var strings: ?*tableLib.Table = null;
 pub var objects: ?*Obj = null;
 
 pub const ObjType = enum(u8) {
@@ -25,16 +28,27 @@ pub const Obj = extern struct {
 
 pub const ObjString = extern struct {
     obj: Obj,
-    // length: i32,
+    length: usize,
     chars: [*:0]u8,
     hash: u32,
 
     pub fn init(chars: [*:0]u8, allocator: std.mem.Allocator) *Obj {
+        const length = std.mem.span(chars).len;
+        const hash = hashSTr(chars);
+
+        const interned = strings.?.findString(std.mem.span(chars), length, hash);
+        if (interned != null) {
+            allocator.free(std.mem.span(chars));
+            return &interned.?.key.?.obj;
+        }
+
         const obj = newObj(ObjString, allocator);
         obj.obj.type = .STRING;
+        obj.length = length;
         obj.chars = chars;
-        obj.hash = hashSTr(chars);
+        obj.hash = hash;
 
+        _ = strings.?.set(obj, valLib.nilVal());
         return &obj.obj;
     }
 

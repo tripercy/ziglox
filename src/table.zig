@@ -11,7 +11,7 @@ const Entry = struct {
     key: ?*ObjString,
 };
 
-const Table = struct {
+pub const Table = struct {
     entries: []Entry,
     count: u32,
 
@@ -75,6 +75,31 @@ const Table = struct {
         // Tombstone value
         entry.key = null;
         entry.value = valLib.boolVal(true);
+    }
+
+    pub fn findString(this: *Table, chars: []const u8, length: usize, hash: u32) ?*Entry {
+        if (this.count == 0) {
+            return null;
+        }
+
+        var index = hash % this.entries.len;
+
+        while (true) : (index = (index + 1) % this.entries.len) {
+            const entry = &this.entries[index];
+            if (entry.key == null) {
+                if (entry.value == .nil) {
+                    return null;
+                }
+                continue;
+            }
+
+            if (entry.key.?.hash == hash and entry.key.?.length == length) {
+                if (std.mem.eql(u8, chars, std.mem.span(entry.key.?.chars))) {
+                    return entry;
+                }
+            }
+        }
+        return null;
     }
 
     fn findEntry(this: *const Table, key: *ObjString) *Entry {

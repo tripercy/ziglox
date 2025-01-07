@@ -5,10 +5,12 @@ const debug = @import("debug.zig");
 const config = @import("config.zig");
 const compiler = @import("compiler.zig");
 const objLib = @import("object.zig");
+const tableLib = @import("table.zig");
 
 const Chunk = chunkLib.Chunk;
 const OpCode = chunkLib.OpCode;
 const Value = valueLib.Value;
+const Table = tableLib.Table;
 
 const STACK_MAX = 256;
 
@@ -23,20 +25,27 @@ pub const VM = struct {
     ip: u32,
     stack: [STACK_MAX]Value,
     stackTop: u32,
+    strings: *Table,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) VM {
+        const strings = allocator.create(Table) catch unreachable;
+        strings.* = Table.init(allocator) catch unreachable;
+        objLib.strings = strings;
         return VM{
             .chunk = undefined,
             .ip = undefined,
             .stack = [_]Value{.{ .nil = {} }} ** STACK_MAX,
             .stackTop = 0,
+            .strings = strings,
             .allocator = allocator,
         };
     }
 
     pub fn deinit(this: *VM) void {
         objLib.freeObjects(this.allocator);
+        this.strings.deinit();
+        this.allocator.destroy(this.strings);
     }
 
     pub fn interpret(this: *VM, source: []const u8) InterpretResult {
